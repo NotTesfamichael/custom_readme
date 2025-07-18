@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>README-Ease: Effortless README Generator</title>
   <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Lexend&display=swap" rel="stylesheet" />
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
@@ -17,7 +18,7 @@
         const language = hljs.getLanguage(lang) ? lang : "plaintext";
         return hljs.highlight(code, { language }).value;
       },
-      langPrefix: "hljs language-", // highlight.js css prefix
+      langPrefix: "hljs language-",
     });
   </script>
 </head>
@@ -31,6 +32,15 @@
     <div class="container">
       <section class="input-section">
         <h2>1. Customize Your README Sections</h2>
+
+        <div class="form-group">
+          <label for="readmeTitle">README Title (used as filename):</label>
+          <input
+            type="text"
+            id="readmeTitle"
+            placeholder="Enter README filename (without extension)"
+          />
+        </div>
 
         <div id="section-container" class="sortable-list">
           <div class="form-section static-section" data-section-id="project-info">
@@ -85,6 +95,7 @@
         <h2>3. Live Preview</h2>
         <div id="readmePreview" class="markdown-body"></div>
         <button id="copyMarkdown" class="btn">Copy Markdown</button>
+        <button id="downloadReadme" class="btn">Download README.md</button>
       </section>
     </div>
   </main>

@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const addSectionBtn = document.getElementById("add-section-btn");
   const sectionTypeSelect = document.getElementById("section-type-select");
 
-  // Create and insert Load from Markdown button under the markdown editor
+  // Load from Markdown button under markdownEditor
   const loadMdBtn = document.createElement("button");
   loadMdBtn.textContent = "Load from Markdown";
   loadMdBtn.className = "btn";
@@ -29,11 +29,22 @@ document.addEventListener("DOMContentLoaded", () => {
     generic: "New Section",
   };
 
-  // Auto-resize textarea helper
   function autoResizeTextarea(textarea) {
     textarea.style.height = "auto";
     textarea.style.height = textarea.scrollHeight + "px";
   }
+
+  // Update preview when project name or description changes
+  projectNameInput.addEventListener("input", () => {
+    manualEditMode = false;
+    renderReadme();
+  });
+  projectDescriptionTextarea.addEventListener("input", () => {
+    autoResizeTextarea(projectDescriptionTextarea);
+    manualEditMode = false;
+    renderReadme();
+  });
+  autoResizeTextarea(projectDescriptionTextarea);
 
   function attachSectionListeners(sectionElement) {
     const textarea = sectionElement.querySelector(".section-content-textarea");
@@ -64,7 +75,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Installation Step element
   function createInstallationStepElement(step = { stepTitle: "", stepCode: "" }) {
     const stepDiv = document.createElement("div");
     stepDiv.classList.add("installation-step");
@@ -110,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
     sectionDiv.setAttribute("draggable", "true");
 
     if (type === "installation") {
-      // Parse content as JSON or empty array
       let steps = [];
       try {
         steps = JSON.parse(content);
@@ -215,11 +224,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const title = customTitle || defaultTitles[sectionType] || "Section";
 
     switch (sectionType) {
-      case "project-info":
-        const projectName = projectNameInput.value.trim();
-        const projectDescription = projectDescriptionTextarea.value.trim();
-        return `# ${projectName || "Your Project Title"}\n\n${projectDescription || "A brief description of your project."}\n\n`;
-
       case "usage":
       case "contributing":
       case "acknowledgments":
@@ -257,8 +261,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function generateMarkdownFromSections() {
     let fullMarkdown = "";
-    const sections = sectionContainer.querySelectorAll(".form-section");
+    // Add project info first
+    const projectName = projectNameInput.value.trim();
+    const projectDescription = projectDescriptionTextarea.value.trim();
+    fullMarkdown += `# ${projectName || "Your Project Title"}\n\n${projectDescription || "A brief description of your project."}\n\n`;
 
+    // Then add other sections
+    const sections = sectionContainer.querySelectorAll(".form-section");
     sections.forEach((section) => {
       fullMarkdown += getSectionContent(section);
     });
@@ -280,9 +289,9 @@ document.addEventListener("DOMContentLoaded", () => {
     readmePreview.querySelectorAll("pre code").forEach((block) => {
       hljs.highlightElement(block);
     });
+    addCopyButtonsToCodeBlocks();
   }
 
-  // Parse markdown text into section objects [{title, content}, ...]
   function parseMarkdownToSections(markdownText) {
     const lines = markdownText.split('\n');
     const sections = [];
@@ -302,7 +311,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return sections;
   }
 
-  // Map heading title to a section type for form
   function getSectionTypeFromTitle(title) {
     const lower = title.toLowerCase();
 
@@ -316,6 +324,46 @@ document.addEventListener("DOMContentLoaded", () => {
     return "generic";
   }
 
+  function addCopyButtonsToCodeBlocks() {
+    const codeBlocks = readmePreview.querySelectorAll("pre");
+
+    codeBlocks.forEach((pre) => {
+      if (pre.querySelector(".copy-code-btn")) return;
+
+      const button = document.createElement("button");
+      button.className = "copy-code-btn";
+      button.type = "button";
+      button.innerText = "Copy";
+
+      button.style.position = "absolute";
+      button.style.top = "8px";
+      button.style.right = "8px";
+      button.style.padding = "4px 8px";
+      button.style.fontSize = "0.75rem";
+      button.style.cursor = "pointer";
+      button.style.borderRadius = "4px";
+      button.style.border = "none";
+      button.style.background = "#007bff";
+      button.style.color = "#fff";
+      button.style.opacity = "0.8";
+      button.style.zIndex = "10";
+
+      pre.style.position = "relative";
+
+      button.addEventListener("click", () => {
+        const code = pre.querySelector("code");
+        if (!code) return;
+
+        navigator.clipboard.writeText(code.innerText).then(() => {
+          button.innerText = "Copied!";
+          setTimeout(() => (button.innerText = "Copy"), 2000);
+        });
+      });
+
+      pre.appendChild(button);
+    });
+  }
+
   addSectionBtn.addEventListener("click", () => {
     const selectedType = sectionTypeSelect.value;
     const newSection = createDraggableSection(selectedType);
@@ -324,7 +372,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderReadme();
   });
 
-  // Drag & drop handlers
   sectionContainer.addEventListener("dragstart", (e) => {
     const targetSection = e.target.closest(".draggable-section");
     if (targetSection) {
@@ -337,7 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
   sectionContainer.addEventListener("dragover", (e) => {
     e.preventDefault();
     const targetSection = e.target.closest(".draggable-section");
-    if (targetSection && draggedItem !== targetSection && !targetSection.classList.contains("static-section")) {
+    if (targetSection && draggedItem !== targetSection) {
       const boundingBox = targetSection.getBoundingClientRect();
       const offset = e.clientY - boundingBox.top;
 
@@ -364,7 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const targetSection = e.target.closest(".draggable-section");
 
-    if (targetSection && draggedItem && draggedItem !== targetSection && !targetSection.classList.contains("static-section")) {
+    if (targetSection && draggedItem && draggedItem !== targetSection) {
       const boundingBox = targetSection.getBoundingClientRect();
       const offset = e.clientY - boundingBox.top;
 
@@ -404,26 +451,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // When user clicks "Load from Markdown" button:
   loadMdBtn.addEventListener("click", () => {
     const markdown = markdownEditor.value.trim();
     if (!markdown) return alert("Please paste some Markdown first!");
 
-    // Parse markdown to sections
     const parsedSections = parseMarkdownToSections(markdown);
 
-    // Clear existing sections except project info (keep it static)
+    // Clear all dynamic sections first
     [...sectionContainer.querySelectorAll(".form-section.draggable-section")].forEach(el => el.remove());
 
-    // Load parsed sections into form
     parsedSections.forEach(({ title, content }) => {
       const type = getSectionTypeFromTitle(title);
-      // Special case: Installation steps expect JSON array of steps - try parse steps out of content
-      if (type === "installation") {
-        // Try to parse multiple installation steps from markdown content
-        // We try to parse sub-headers ### Step X and their code blocks
 
-        // Regex to capture step titles and code blocks
+      if (type === "installation") {
         const stepRegex = /###\s*(.*)\n([\s\S]*?)(?=(\n###|$))/g;
         const steps = [];
         let match;
@@ -431,7 +471,6 @@ document.addEventListener("DOMContentLoaded", () => {
           const stepTitle = match[1].trim();
           const stepCodeRaw = match[2].trim();
 
-          // Remove markdown code fences if present
           let stepCode = stepCodeRaw;
           const codeFenceMatch = stepCodeRaw.match(/^```(\w*)\n([\s\S]*)\n```$/);
           if (codeFenceMatch) {
@@ -442,36 +481,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (steps.length === 0) {
-          // fallback: treat whole content as one step with no title
           steps.push({ stepTitle: "", stepCode: content.trim() });
         }
 
-        // Pass steps array as JSON string in content param
         content = JSON.stringify(steps);
       }
 
-      const newSection = createDraggableSection(type, title.trim(), content.trim());
+      // Skip project info section (first level # title)
+      if (title.toLowerCase().startsWith("your project title") || title.trim().length === 0) return;
+
+      const newSection = createDraggableSection(type, title, content);
       sectionContainer.appendChild(newSection);
     });
 
     manualEditMode = false;
     renderReadme();
-
-    // Scroll to top so user sees changes
-    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  function addInitialSections() {
-    const initialInstallation = createDraggableSection("installation");
-    const initialFeatures = createDraggableSection("features");
-    const initialUsage = createDraggableSection("usage");
- 
-
-    sectionContainer.appendChild(initialInstallation);
-    sectionContainer.appendChild(initialFeatures);
-    sectionContainer.appendChild(initialUsage);
-  }
-
-  addInitialSections();
+  // Initial render
   renderReadme();
 });
