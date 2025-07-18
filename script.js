@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let manualEditMode = false;
 
   const defaultTitles = {
-    installation: "Installation",
+    installation: "Installation Steps",
     usage: "Usage",
     features: "Features",
     contributing: "Contributing",
@@ -21,26 +21,188 @@ document.addEventListener("DOMContentLoaded", () => {
     acknowledgments: "Acknowledgments",
   };
 
+  // Auto-resize textarea helper
+  function autoResizeTextarea(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+  }
+
   function attachSectionListeners(sectionElement) {
-    sectionElement.querySelector(".section-content-textarea")?.addEventListener("input", () => {
+    // For generic sections (single textarea)
+    const textarea = sectionElement.querySelector(".section-content-textarea");
+    if (textarea) {
+      textarea.addEventListener("input", () => {
+        autoResizeTextarea(textarea);
+        manualEditMode = false;
+        renderReadme();
+      });
+      autoResizeTextarea(textarea);
+    }
+
+    // For generic section title input
+    const titleInput = sectionElement.querySelector(".section-title-input");
+    if (titleInput) {
+      titleInput.addEventListener("input", () => {
+        manualEditMode = false;
+        renderReadme();
+      });
+    }
+
+    // For remove section button
+    const removeBtn = sectionElement.querySelector(".remove-section-btn");
+    if (removeBtn) {
+      removeBtn.addEventListener("click", () => {
+        sectionElement.remove();
+        manualEditMode = false;
+        renderReadme();
+      });
+    }
+  }
+
+  // Create an installation step element (step title + code)
+  function createInstallationStepElement(step = { stepTitle: "", stepCode: "" }) {
+    const stepDiv = document.createElement("div");
+    stepDiv.classList.add("installation-step");
+    stepDiv.style.marginBottom = "1rem";
+
+    stepDiv.innerHTML = `
+      <input type="text" class="step-title-input" placeholder="Step title (e.g. Step 1: Install Dependencies)" value="${step.stepTitle}" />
+      <textarea class="step-code-textarea" rows="4" placeholder="Code or instructions for this step...">${step.stepCode}</textarea>
+      <button class="remove-step-btn btn" style="background:#dc3545; margin-top:5px;">Remove Step</button>
+      <hr />
+    `;
+
+    const textarea = stepDiv.querySelector(".step-code-textarea");
+    textarea.addEventListener("input", () => {
+      textarea.style.height = "auto";
+      textarea.style.height = textarea.scrollHeight + "px";
+      manualEditMode = false;
+      renderReadme();
+    });
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+
+    const removeStepBtn = stepDiv.querySelector(".remove-step-btn");
+    removeStepBtn.addEventListener("click", () => {
+      stepDiv.remove();
       manualEditMode = false;
       renderReadme();
     });
 
-    sectionElement.querySelector(".section-title-input")?.addEventListener("input", () => {
+    const stepTitleInput = stepDiv.querySelector(".step-title-input");
+    stepTitleInput.addEventListener("input", () => {
       manualEditMode = false;
       renderReadme();
     });
 
-    sectionElement.querySelector(".remove-section-btn")?.addEventListener("click", () => {
-      sectionElement.remove();
-      manualEditMode = false;
-      renderReadme();
-    });
+    return stepDiv;
+  }
+
+  function createDraggableSection(type, title = "", content = "") {
+    const sectionDiv = document.createElement("div");
+    sectionDiv.classList.add("form-section", "draggable-section");
+    sectionDiv.dataset.sectionId = type;
+    sectionDiv.setAttribute("draggable", "true");
+
+    if (type === "installation") {
+      // parse content as JSON for steps or empty array
+      let steps = [];
+      try {
+        steps = JSON.parse(content);
+        if (!Array.isArray(steps)) steps = [];
+      } catch {
+        steps = [];
+      }
+      if (steps.length === 0) steps = [{ stepTitle: "", stepCode: "" }];
+
+      sectionDiv.innerHTML = `
+        <h3 class="section-handle">
+          <input type="text" class="section-title-input" value="${title || defaultTitles.installation}" />
+          <span class="drag-icon">⠿</span>
+        </h3>
+        <div class="steps-container"></div>
+        <button class="add-step-btn btn" style="margin-top: 8px;">Add Installation Step</button>
+        <button class="remove-section-btn" style="margin-top: 10px;">Remove Section</button>
+      `;
+
+      const stepsContainer = sectionDiv.querySelector(".steps-container");
+      steps.forEach((step) => {
+        stepsContainer.appendChild(createInstallationStepElement(step));
+      });
+
+      const addStepBtn = sectionDiv.querySelector(".add-step-btn");
+      addStepBtn.addEventListener("click", () => {
+        stepsContainer.appendChild(createInstallationStepElement());
+      });
+
+      attachSectionListeners(sectionDiv);
+    } else {
+      // Other sections: single textarea and optional title input
+      let placeholderText = `Content for ${type.charAt(0).toUpperCase() + type.slice(1)} section...`;
+      let sectionTitle = title || defaultTitles[type] || "New Section Title";
+
+      sectionDiv.innerHTML = `
+        <h3 class="section-handle">
+          <input type="text" class="section-title-input" value="${sectionTitle}">
+          <span class="drag-icon">⠿</span>
+        </h3>
+        <div class="form-group">
+          <textarea class="section-content-textarea" rows="4" placeholder="${placeholderText}">${content}</textarea>
+        </div>
+        <button class="remove-section-btn">Remove</button>
+      `;
+
+      attachSectionListeners(sectionDiv);
+
+      const textarea = sectionDiv.querySelector(".section-content-textarea");
+      if (textarea) autoResizeTextarea(textarea);
+    }
+
+    return sectionDiv;
   }
 
   function getSectionContent(sectionElement) {
     const sectionType = sectionElement.dataset.sectionId;
+
+    if (sectionType === "installation") {
+      const titleInput = sectionElement.querySelector(".section-title-input");
+      const sectionTitle = titleInput ? titleInput.value.trim() || defaultTitles.installation : defaultTitles.installation;
+
+      const stepsContainer = sectionElement.querySelector(".steps-container");
+      if (!stepsContainer) return "";
+
+      const steps = [];
+      stepsContainer.querySelectorAll(".installation-step").forEach((stepDiv) => {
+        const stepTitleInput = stepDiv.querySelector(".step-title-input");
+        const stepCodeTextarea = stepDiv.querySelector(".step-code-textarea");
+
+        const stepTitle = stepTitleInput ? stepTitleInput.value.trim() : "";
+        const stepCode = stepCodeTextarea ? stepCodeTextarea.value.trim() : "";
+
+        if (stepTitle || stepCode) {
+          steps.push({ stepTitle, stepCode });
+        }
+      });
+
+      if (steps.length === 0) return "";
+
+      let markdown = `## ${sectionTitle}\n\n`;
+      steps.forEach(({ stepTitle, stepCode }, idx) => {
+        markdown += `### ${stepTitle || `Step ${idx + 1}`}\n\n`;
+        if (stepCode) {
+          if (/^```/.test(stepCode)) {
+            markdown += `${stepCode}\n\n`;
+          } else {
+            markdown += "```\n" + stepCode + "\n```\n\n";
+          }
+        } else {
+          markdown += "\n";
+        }
+      });
+      return markdown;
+    }
+
+    // Other sections (project-info, features, usage, contributing, etc.)
     const textarea = sectionElement.querySelector(".section-content-textarea");
     const content = textarea ? textarea.value.trim() : "";
 
@@ -54,9 +216,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const projectName = projectNameInput.value.trim();
         const projectDescription = projectDescriptionTextarea.value.trim();
         return `# ${projectName || "Your Project Title"}\n\n${projectDescription || "A brief description of your project."}\n\n`;
-
-      case "installation":
-        return content ? `## ${title}\n\n${wrapCodeBlock(content)}\n\n` : "";
 
       case "usage":
       case "contributing":
@@ -123,33 +282,6 @@ document.addEventListener("DOMContentLoaded", () => {
     readmePreview.querySelectorAll("pre code").forEach((block) => {
       hljs.highlightElement(block);
     });
-  }
-
-  function createDraggableSection(type, title = "", content = "") {
-    const sectionDiv = document.createElement("div");
-    sectionDiv.classList.add("form-section", "draggable-section");
-    sectionDiv.dataset.sectionId = type;
-    sectionDiv.setAttribute("draggable", "true");
-
-    let placeholderText = `Content for ${type.charAt(0).toUpperCase() + type.slice(1)} section...`;
-
-    let sectionTitle = title || defaultTitles[type] || "New Section Title";
-
-    let innerHTML = `
-      <h3 class="section-handle">
-        <input type="text" class="section-title-input" value="${sectionTitle}">
-        <span class="drag-icon">⠿</span>
-      </h3>
-      <div class="form-group">
-        <textarea class="section-content-textarea" rows="4" placeholder="${placeholderText}">${content}</textarea>
-      </div>
-      <button class="remove-section-btn">Remove</button>
-    `;
-
-    sectionDiv.innerHTML = innerHTML;
-    attachSectionListeners(sectionDiv);
-
-    return sectionDiv;
   }
 
   addSectionBtn.addEventListener("click", () => {
@@ -240,9 +372,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function addInitialSections() {
+    // Add installation section with one default step
     const initialInstallation = createDraggableSection("installation");
     sectionContainer.appendChild(initialInstallation);
 
+    // Add usage section (normal single textarea)
     const initialUsage = createDraggableSection("usage");
     sectionContainer.appendChild(initialUsage);
   }
@@ -252,4 +386,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   projectNameInput.addEventListener("input", renderReadme);
   projectDescriptionTextarea.addEventListener("input", renderReadme);
+
 });

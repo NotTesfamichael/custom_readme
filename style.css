@@ -66,7 +66,8 @@ textarea {
 }
 
 textarea {
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
 }
 
 /* Draggable Section Styles */
@@ -86,26 +87,34 @@ textarea {
   font-size: 1.1em;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   cursor: grab;
   padding-bottom: 5px;
   border-bottom: 1px dashed #eee;
 }
 
 .section-handle {
-  cursor: grab;
-  user-select: none;
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.section-title-input {
+  flex-grow: 1;
+  font-size: 1em;
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 .drag-icon {
   font-size: 1.2em;
-  margin-left: 8px;
   color: #aaa;
+  margin-left: 8px;
 }
 
 .remove-section-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
   background-color: #dc3545;
   color: white;
   border: none;
@@ -221,3 +230,10 @@ footer {
   padding: 0;
   color: inherit;
 }
+textarea {
+  resize: none;
+  overflow-y: hidden;  /* allow vertical growth but no scroll bar */
+  min-height: 50px;
+  line-height: 1.4;
+}
+
