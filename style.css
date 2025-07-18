@@ -1,0 +1,223 @@
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+  color: #333;
+}
+
+header {
+  background: #333;
+  color: #fff;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  padding: 20px;
+  gap: 20px;
+}
+
+.input-section,
+.preview-section {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  min-width: 45%;
+  display: flex;
+  flex-direction: column;
+}
+
+h2 {
+  color: #333;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+  margin-top: 0;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input[type="text"],
+textarea {
+  width: calc(100% - 20px);
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Draggable Section Styles */
+.form-section {
+  background-color: #fcfcfc;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.form-section h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed #eee;
+}
+
+.section-handle {
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-icon {
+  font-size: 1.2em;
+  margin-left: 8px;
+  color: #aaa;
+}
+
+.remove-section-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 0.8em;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.remove-section-btn:hover {
+  opacity: 1;
+}
+
+/* Drag-and-Drop Feedback */
+.sortable-list .dragging {
+  opacity: 0.5;
+}
+
+.sortable-list .drag-over-top {
+  border-top: 2px solid #007bff;
+}
+
+.sortable-list .drag-over-bottom {
+  border-bottom: 2px solid #007bff;
+}
+
+/* Add Section Area */
+.add-section-area {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.add-section-area select,
+.add-section-area button {
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.add-section-area button {
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.3s ease;
+}
+
+.add-section-area button:hover {
+  background-color: #218838;
+}
+
+/* Preview Section */
+.markdown-body {
+  border: 1px solid #ddd;
+  padding: 15px;
+  min-height: 300px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #0056b3;
+}
+
+footer {
+  text-align: center;
+  padding: 20px;
+  margin-top: 20px;
+  background-color: #333;
+  color: #fff;
+}
+
+/* Dark theme for code blocks */
+.markdown-body pre {
+  background-color: #282c34;
+  padding: 15px;
+  border-radius: 6px;
+  overflow-x: auto;
+  color: #abb2bf;
+  font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
+}
+
+.markdown-body code {
+  font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
+  background-color: rgba(40, 44, 52, 0.7);
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #e06c75;
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+  color: inherit;
+}
