@@ -8,6 +8,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const addSectionBtn = document.getElementById("add-section-btn");
   const sectionTypeSelect = document.getElementById("section-type-select");
 
+  // Create and insert Load from Markdown button under the markdown editor
+  const loadMdBtn = document.createElement("button");
+  loadMdBtn.textContent = "Load from Markdown";
+  loadMdBtn.className = "btn";
+  loadMdBtn.style.marginTop = "10px";
+  markdownEditor.parentNode.appendChild(loadMdBtn);
+
   let draggedItem = null;
   let manualEditMode = false;
 
@@ -19,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     license: "License",
     links: "Links/Resources",
     acknowledgments: "Acknowledgments",
+    generic: "New Section",
   };
 
   // Auto-resize textarea helper
@@ -28,7 +36,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function attachSectionListeners(sectionElement) {
-    // For generic sections (single textarea)
     const textarea = sectionElement.querySelector(".section-content-textarea");
     if (textarea) {
       textarea.addEventListener("input", () => {
@@ -39,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
       autoResizeTextarea(textarea);
     }
 
-    // For generic section title input
     const titleInput = sectionElement.querySelector(".section-title-input");
     if (titleInput) {
       titleInput.addEventListener("input", () => {
@@ -48,7 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // For remove section button
     const removeBtn = sectionElement.querySelector(".remove-section-btn");
     if (removeBtn) {
       removeBtn.addEventListener("click", () => {
@@ -59,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Create an installation step element (step title + code)
+  // Installation Step element
   function createInstallationStepElement(step = { stepTitle: "", stepCode: "" }) {
     const stepDiv = document.createElement("div");
     stepDiv.classList.add("installation-step");
@@ -105,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sectionDiv.setAttribute("draggable", "true");
 
     if (type === "installation") {
-      // parse content as JSON for steps or empty array
+      // Parse content as JSON or empty array
       let steps = [];
       try {
         steps = JSON.parse(content);
@@ -137,9 +142,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       attachSectionListeners(sectionDiv);
     } else {
-      // Other sections: single textarea and optional title input
       let placeholderText = `Content for ${type.charAt(0).toUpperCase() + type.slice(1)} section...`;
-      let sectionTitle = title || defaultTitles[type] || "New Section Title";
+      let sectionTitle = title || defaultTitles[type] || "New Section";
 
       sectionDiv.innerHTML = `
         <h3 class="section-handle">
@@ -202,7 +206,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return markdown;
     }
 
-    // Other sections (project-info, features, usage, contributing, etc.)
     const textarea = sectionElement.querySelector(".section-content-textarea");
     const content = textarea ? textarea.value.trim() : "";
 
@@ -252,11 +255,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function wrapCodeBlock(text) {
-    if (/^```[\s\S]*```$/.test(text.trim())) return text;
-    return "```\n" + text + "\n```";
-  }
-
   function generateMarkdownFromSections() {
     let fullMarkdown = "";
     const sections = sectionContainer.querySelectorAll(".form-section");
@@ -284,6 +282,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Parse markdown text into section objects [{title, content}, ...]
+  function parseMarkdownToSections(markdownText) {
+    const lines = markdownText.split('\n');
+    const sections = [];
+    let currentSection = null;
+
+    lines.forEach(line => {
+      const headerMatch = line.match(/^##+\s+(.*)/);
+      if (headerMatch) {
+        if (currentSection) sections.push(currentSection);
+        currentSection = { title: headerMatch[1].trim(), content: "" };
+      } else if (currentSection) {
+        currentSection.content += line + "\n";
+      }
+    });
+
+    if (currentSection) sections.push(currentSection);
+    return sections;
+  }
+
+  // Map heading title to a section type for form
+  function getSectionTypeFromTitle(title) {
+    const lower = title.toLowerCase();
+
+    if (lower.includes("feature")) return "features";
+    if (lower.includes("install")) return "installation";
+    if (lower.includes("usage")) return "usage";
+    if (lower.includes("contribute")) return "contributing";
+    if (lower.includes("license")) return "license";
+    if (lower.includes("acknowledgment")) return "acknowledgments";
+    if (lower.includes("link")) return "links";
+    return "generic";
+  }
+
   addSectionBtn.addEventListener("click", () => {
     const selectedType = sectionTypeSelect.value;
     const newSection = createDraggableSection(selectedType);
@@ -292,6 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderReadme();
   });
 
+  // Drag & drop handlers
   sectionContainer.addEventListener("dragstart", (e) => {
     const targetSection = e.target.closest(".draggable-section");
     if (targetSection) {
@@ -371,20 +404,74 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  function addInitialSections() {
-    // Add installation section with one default step
-    const initialInstallation = createDraggableSection("installation");
-    sectionContainer.appendChild(initialInstallation);
+  // When user clicks "Load from Markdown" button:
+  loadMdBtn.addEventListener("click", () => {
+    const markdown = markdownEditor.value.trim();
+    if (!markdown) return alert("Please paste some Markdown first!");
 
-    // Add usage section (normal single textarea)
+    // Parse markdown to sections
+    const parsedSections = parseMarkdownToSections(markdown);
+
+    // Clear existing sections except project info (keep it static)
+    [...sectionContainer.querySelectorAll(".form-section.draggable-section")].forEach(el => el.remove());
+
+    // Load parsed sections into form
+    parsedSections.forEach(({ title, content }) => {
+      const type = getSectionTypeFromTitle(title);
+      // Special case: Installation steps expect JSON array of steps - try parse steps out of content
+      if (type === "installation") {
+        // Try to parse multiple installation steps from markdown content
+        // We try to parse sub-headers ### Step X and their code blocks
+
+        // Regex to capture step titles and code blocks
+        const stepRegex = /###\s*(.*)\n([\s\S]*?)(?=(\n###|$))/g;
+        const steps = [];
+        let match;
+        while ((match = stepRegex.exec(content)) !== null) {
+          const stepTitle = match[1].trim();
+          const stepCodeRaw = match[2].trim();
+
+          // Remove markdown code fences if present
+          let stepCode = stepCodeRaw;
+          const codeFenceMatch = stepCodeRaw.match(/^```(\w*)\n([\s\S]*)\n```$/);
+          if (codeFenceMatch) {
+            stepCode = codeFenceMatch[2].trim();
+          }
+
+          steps.push({ stepTitle, stepCode });
+        }
+
+        if (steps.length === 0) {
+          // fallback: treat whole content as one step with no title
+          steps.push({ stepTitle: "", stepCode: content.trim() });
+        }
+
+        // Pass steps array as JSON string in content param
+        content = JSON.stringify(steps);
+      }
+
+      const newSection = createDraggableSection(type, title.trim(), content.trim());
+      sectionContainer.appendChild(newSection);
+    });
+
+    manualEditMode = false;
+    renderReadme();
+
+    // Scroll to top so user sees changes
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  function addInitialSections() {
+    const initialInstallation = createDraggableSection("installation");
+    const initialFeatures = createDraggableSection("features");
     const initialUsage = createDraggableSection("usage");
+ 
+
+    sectionContainer.appendChild(initialInstallation);
+    sectionContainer.appendChild(initialFeatures);
     sectionContainer.appendChild(initialUsage);
   }
 
   addInitialSections();
   renderReadme();
-
-  projectNameInput.addEventListener("input", renderReadme);
-  projectDescriptionTextarea.addEventListener("input", renderReadme);
-
 });

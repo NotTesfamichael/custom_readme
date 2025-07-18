@@ -233,7 +233,7 @@ footer {
 textarea {
   resize: none;
   overflow-y: hidden;  /* allow vertical growth but no scroll bar */
-  min-height: 50px;
+  min-height: 70px;
   line-height: 1.4;
 }
 
